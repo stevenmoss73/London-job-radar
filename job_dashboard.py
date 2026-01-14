@@ -114,7 +114,7 @@ max_pages = st.sidebar.slider(
 if st.sidebar.button("🔍 Fetch latest jobs"):
     with st.spinner("Scraping Indeed…"):
         query_param = role_query.replace(" ", "+")
-        df = scrape_indeed(query_param, location_query, max_pages=max_pages)
+       df = scrape_google_jobs(query_param, location_query, max_pages=max_pages)
 
         if df.empty:
             st.warning("No jobs found. Try adjusting your search terms or pages.")
@@ -152,5 +152,6 @@ if st.sidebar.button("🔍 Fetch latest jobs"):
 
 else:
     st.info("Set your search terms in the sidebar and click **Fetch latest jobs** to get started.")
+
 
 
