@@ -9,7 +9,7 @@ import re
 # Scraper
 # -------------------------
 
-def scrape_indeed(query, location="London", max_pages=1):
+def scrape_google_jobs(query, location="London", max_pages=1):
     jobs = []
 
     headers = {
@@ -23,35 +23,34 @@ def scrape_indeed(query, location="London", max_pages=1):
 
     for page in range(max_pages):
         start = page * 10
-        url = f"https://uk.indeed.com/jobs?q={query}&l={location}&start={start}"
+        url = (
+            f"https://www.google.com/search?q={query}+jobs+in+{location}"
+            f"&ibp=htl;jobs&start={start}"
+        )
 
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Primary selector
-        cards = soup.select("div.job_seen_beacon")
-
-        # Fallback selector
-        if not cards:
-            cards = soup.select("td.resultContent")
+        cards = soup.select("div[jscontroller='Q7Rsec']")
 
         for card in cards:
-            title = card.select_one("h2.jobTitle")
-            company = card.select_one(".companyName")
-            loc = card.select_one(".companyLocation")
-            summary = card.select_one(".job-snippet")
-            link = card.find("a", href=True)
+            title = card.select_one("div[role='heading']")
+            company = card.select_one("div.KKh3md span")
+            loc = card.select_one("div.KKh3md div")
+            snippet = card.select_one("div.YgLbBe")
+            link_tag = card.find("a", href=True)
 
             jobs.append({
                 "Title": title.get_text(strip=True) if title else None,
                 "Company": company.get_text(strip=True) if company else None,
                 "Location": loc.get_text(strip=True) if loc else None,
-                "Summary": summary.get_text(" ", strip=True) if summary else None,
-                "Link": "https://uk.indeed.com" + link["href"] if link else None
+                "Summary": snippet.get_text(" ", strip=True) if snippet else None,
+                "Link": "https://www.google.com" + link_tag["href"] if link_tag else None
             })
 
-    # Remove empty rows
     return pd.DataFrame([j for j in jobs if j["Title"]])
+
+
 
 
 # -------------------------
@@ -153,4 +152,5 @@ if st.sidebar.button("🔍 Fetch latest jobs"):
 
 else:
     st.info("Set your search terms in the sidebar and click **Fetch latest jobs** to get started.")
+
 
