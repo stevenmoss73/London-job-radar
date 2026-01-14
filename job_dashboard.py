@@ -31,7 +31,8 @@ def scrape_google_jobs(query, location="London", max_pages=1):
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        cards = soup.select("div[jscontroller='Q7Rsec']")
+        # Updated selector for Google Jobs cards
+        cards = soup.select("div[jsname='rJ9VDb']")
 
         for card in cards:
             title = card.select_one("div[role='heading']")
@@ -49,6 +50,7 @@ def scrape_google_jobs(query, location="London", max_pages=1):
             })
 
     return pd.DataFrame([j for j in jobs if j["Title"]])
+
 
 
 
@@ -152,6 +154,7 @@ if st.sidebar.button("🔍 Fetch latest jobs"):
 
 else:
     st.info("Set your search terms in the sidebar and click **Fetch latest jobs** to get started.")
+
 
 
 
