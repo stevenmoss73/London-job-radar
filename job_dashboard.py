@@ -18,20 +18,29 @@ def scrape_reed(query, location="London", max_pages=1):
     }
 
     for page in range(1, max_pages + 1):
-        url = f"https://www.reed.co.uk/jobs/{query}-jobs-in-{location}?pageno={page}"
+        url = (
+            f"https://www.reed.co.uk/api/1.0/search?"
+            f"keywords={query}&location={location}&resultsToTake=25&page={page}"
+        )
 
         response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, "html.parser")
 
-        # Reed job cards use data attributes (more stable)
-        cards = soup.select("div[data-qa='job-card']")
+        if response.status_code != 200:
+            continue
 
-        for card in cards:
-            title = card.select_one("a[data-qa='job-title']")
-            company = card.select_one("a[data-qa='job-company']")
-            loc = card.select_one("span[data-qa='job-location']")
-            snippet = card.select_one("div[data-qa='job-description']")
-            link = title["href"] if title else None
+        data = response.json()
+
+        for job in data.get("results", []):
+            jobs.append({
+                "Title": job.get("jobTitle"),
+                "Company": job.get("employerName"),
+                "Location": job.get("locationName"),
+                "Summary": job.get("jobDescription"),
+                "Link": job.get("jobUrl")
+            })
+
+    return pd.DataFrame(jobs)
+
 
             jobs.append({
                 "Title": title.get_text(strip=True) if title else None,
@@ -117,4 +126,5 @@ if run_search:
 
 else:
     st.info("Enter your search terms and click 'Fetch Latest Jobs' to begin.")
+
 
