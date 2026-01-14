@@ -10,44 +10,48 @@ import re
 # -------------------------
 
 def scrape_indeed(query, location="London", max_pages=1):
-    """
-    Scrape Indeed UK for a given query and location.
-    max_pages controls how many result pages to scan.
-    """
     jobs = []
 
-    for page in range(0, max_pages):
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"
+    }
+
+    for page in range(max_pages):
         start = page * 10
         url = f"https://uk.indeed.com/jobs?q={query}&l={location}&start={start}"
-        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-        if response.status_code != 200:
-            continue
 
+        response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        for card in soup.select("div.job_seen_beacon"):
-            title_el = card.select_one("h2.jobTitle")
-            company_el = card.select_one("span.companyName")
-            location_el = card.select_one("div.companyLocation")
-            summary_el = card.select_one("div.job-snippet")
-            link_el = card.select_one("a")
+        # Primary selector
+        cards = soup.select("div.job_seen_beacon")
 
-            title = title_el.get_text(strip=True) if title_el else None
-            company = company_el.get_text(strip=True) if company_el else None
-            loc = location_el.get_text(strip=True) if location_el else None
-            summary = summary_el.get_text(" ", strip=True) if summary_el else None
-            link = "https://uk.indeed.com" + link_el["href"] if link_el and link_el.get("href") else None
+        # Fallback selector
+        if not cards:
+            cards = soup.select("td.resultContent")
 
-            if title and company:
-                jobs.append({
-                    "Title": title,
-                    "Company": company,
-                    "Location": loc,
-                    "Summary": summary,
-                    "Link": link
-                })
+        for card in cards:
+            title = card.select_one("h2.jobTitle")
+            company = card.select_one(".companyName")
+            loc = card.select_one(".companyLocation")
+            summary = card.select_one(".job-snippet")
+            link = card.find("a", href=True)
 
-    return pd.DataFrame(jobs)
+            jobs.append({
+                "Title": title.get_text(strip=True) if title else None,
+                "Company": company.get_text(strip=True) if company else None,
+                "Location": loc.get_text(strip=True) if loc else None,
+                "Summary": summary.get_text(" ", strip=True) if summary else None,
+                "Link": "https://uk.indeed.com" + link["href"] if link else None
+            })
+
+    # Remove empty rows
+    return pd.DataFrame([j for j in jobs if j["Title"]])
 
 
 # -------------------------
@@ -149,3 +153,4 @@ if st.sidebar.button("🔍 Fetch latest jobs"):
 
 else:
     st.info("Set your search terms in the sidebar and click **Fetch latest jobs** to get started.")
+
